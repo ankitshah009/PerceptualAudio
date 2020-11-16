@@ -1,26 +1,70 @@
-# Learned Perceptual Audio Metric (LPAM) [[Paper]](https://arxiv.org/abs/2001.04460) [[Webpage]](https://gfx.cs.princeton.edu/pubs/Manocha_2020_ADP/)
+# Deep Perceptual Audio Metric (DPAM) [[Paper]](https://arxiv.org/abs/2001.04460) [[Webpage]](https://pixl.cs.princeton.edu/pubs/Manocha_2020_ADP/) [[Teaser]](https://youtu.be/dSh5SrMeyPQ) [[Full Video]](https://youtu.be/yOceeut_4Gg)
+## Also checkout our newer improved metric: [[CDPAM]](https://github.com/pranaymanocha/PerceptualAudio/tree/master/cdpam)
 
 **A Differentiable Perceptual Audio Metric Learned from Just Noticeable Differences**  
 [Pranay Manocha](https://www.cs.princeton.edu/~pmanocha/), [Adam Finkelstein](https://www.cs.princeton.edu/~af/), [Richard Zhang](http://richzhang.github.io/), [Nicholas J. Bryan](https://ccrma.stanford.edu/~njb/), [Gautham J. Mysore](https://ccrma.stanford.edu/~gautham/Site/Gautham_J._Mysore.html), [Zeyu Jin](https://research.adobe.com/person/zeyu-jin/)  
-Accepted at [Interspeech2020](https://arxiv.org/abs/2001.04460)
+Accepted at [Interspeech 2020](https://arxiv.org/abs/2001.04460)
 
 <img src='https://richzhang.github.io/index_files/audio_teaser.jpg' width=500>
 
-This is a Tensorflow implementation of our audio perceptual metric. It contains (0) minimal code to run our perceptual metric (LPAM), (1) code to train the perceptual metric on our JND dataset, and (2) an example of using our perceptual metric as a loss function for speech denoising.
+This is a Tensorflow implementation (a pytorch implementation is [here](https://github.com/adrienchaton/PerceptualAudio_pytorch)) of our audio perceptual metric. It contains (0) minimal code to run our perceptual metric (DPAM), (1) code to train the perceptual metric on our JND dataset, and (2) an example of using our perceptual metric as a loss function for speech denoising.
+
+
+## Also checkout our newest learned metric: CDPAM: Contrastive learning based deep perceptual audio similarity metric
+Please see ```cd cdpam``` and follow the instructions in the readme. We also provide pretrained models for:
+1) We make use of CDPAM for training a waveform synthesis model. We use the codebase from [here](https://github.com/descriptinc/melgan-neurips). We train both single and cross-speaker models.
+
+2) Real-time speech enhancement: We make use of CDPAM as a loss function for training an SE model. We use the codebase from [here](https://github.com/facebookresearch/denoiser). We just augment CDPAM to their loss for training.
+
+## Things to note:
+1) At the moment, this algorithm requires using 16-bit PCM audio files to perform correctly. You can use sox to convert your file.
+2) The current pretrained models support sr=22050Hz. Please make sure to resample your files first before using the metric.
+For ease, you can load your audio clip using librosa.load(filename,sr=22050) and then rescale to [-32768 to 32768] using np.round(audio_file.astype(np.float)*32768). See ```metric_code/metric_use_simple.py``` for an example.
+
+## Quick Start
+Installing the metric (DPAM - perceptual audio similarity metric)
+```bash
+pip install dpam
+```
+
+Using the metric is as simple as: 
+```bash
+import dpam
+loss_fn = dpam.DPAM()
+wav_ref = dpam.load_audio('sample_audio/ref.wav')
+wav_out = dpam.load_audio('sample_audio/2.wav')
+
+dist = loss_fn.forward(wav_ref,wav_out)
+```
 
 ## (0) Setup and basic usage
 
-Required python libraries: Tensorflow with GPU support (>=1.14) + Scipy (>=1.1) + Numpy (>=1.14) + Tqdm (>=4.0.0). To install in your python distribution, run ```pip install -r requirements.txt```.
+Required python libraries: Tensorflow with GPU support (>=1.14)(uses tensorflow's slim library so doesnt support tf2.0) + Scipy (>=1.1) + Numpy (>=1.14) + Tqdm (>=4.0.0). To install in your python distribution, run ```pip install -r requirements.txt```.
 
 Additional notes:
 - Warning: Make sure your libraries (Cuda, Cudnn,...) are compatible with the TensorFlow version you're using or the code will not run.
 - Required software (for resampling): [SoX](http://sox.sourceforge.net/), [FFmpeg](https://www.ffmpeg.org/).
 - Important note: At the moment, this algorithm requires using 32-bit floating-point audio files to perform correctly. You can use sox to convert your file.
 - Tested on Nvidia GeForce RTX 2080 GPU with Cuda (>=9.2) and CuDNN (>=7.3.0). CPU mode should also work with minor changes.
+- The current pretrained models support **sr=22050Hz**. Please make sure to resample your files first before using the metric.
+
+
+## There are two ways to run the code:
+
+### Using pip
+This version currently supports **evaluating** the trained metric as a loss function. This version currently does not support a simple interface to **backpropogate and train** the metric. For training, please clone this repo and follow the instructions below.
+```bash
+pip install dpam
+```
+Please look at  ```example_pip.py``` as an example on how to use the function. 
+
+### Cloning from the repository
+Follow the instructions below to: 1) Evaluate the metric on a few examples, 2) Train a metric on our dataset, 3) Use the metric to optimize a downstream task and 4) Use our pretrained speech enhancement model (trained using our loss function metric).
+
 
 ### Minimal basic usage as a distance metric
 
-Running the command below takes two audio files as input and gives the perceptual distance between the files. It should return **distance = 0.1928**. 
+Running the command below takes two audio files as input and gives the perceptual distance between the files. It should return (approx)**distance = 0.1929**. Some GPU's are non-deterministic, and so the distance could vary in the lsb.
 
 ```
 cd metric_code
